@@ -1,0 +1,858 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DF Tracker Web Pro</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #00ff88;
+            --primary-glow: rgba(0, 255, 136, 0.3);
+            --danger: #ff4757;
+            --danger-glow: rgba(255, 71, 87, 0.3);
+            --bg: #0a0a0c;
+            --glass: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --text-main: #f1f2f6;
+            --text-dim: #a4b0be;
+            --sidebar-w: 320px;
+        }
+
+        * {
+            box-sizing: border-box;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        body {
+            margin: 0;
+            font-family: 'Outfit', sans-serif;
+            background: var(--bg);
+            color: var(--text-main);
+            overflow: hidden;
+            background-image:
+                radial-gradient(circle at 10% 20%, rgba(0, 255, 136, 0.05) 0%, transparent 40%),
+                radial-gradient(circle at 90% 80%, rgba(0, 255, 136, 0.05) 0%, transparent 40%);
+        }
+
+        .login-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--bg);
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .login-card {
+            background: var(--glass);
+            padding: 40px;
+            border-radius: 24px;
+            border: 1px solid var(--glass-border);
+            width: 400px;
+            text-align: center;
+            backdrop-filter: blur(20px);
+        }
+
+        .app-container {
+            display: flex;
+            height: 100vh;
+            padding: 20px;
+            gap: 20px;
+            opacity: 0;
+            transition: opacity 0.5s;
+        }
+
+        .app-container.active {
+            opacity: 1;
+        }
+
+        .panel {
+            background: var(--glass);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar {
+            width: var(--sidebar-w);
+            padding: 30px;
+            flex-shrink: 0;
+            overflow-y: auto;
+        }
+
+        .main-content {
+            flex: 1;
+            padding: 40px;
+            overflow-y: auto;
+        }
+
+        .logo-section {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 40px;
+        }
+
+        .logo-text {
+            font-size: 20px;
+            font-weight: 700;
+            background: linear-gradient(to right, #fff, var(--text-dim));
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .input-group {
+            margin-bottom: 25px;
+        }
+
+        label {
+            display: block;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: var(--text-dim);
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+
+        input,
+        select {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            padding: 12px 16px;
+            color: #fff;
+            font-family: inherit;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        input:focus {
+            border-color: var(--primary);
+            outline: none;
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .btn-primary {
+            width: 100%;
+            padding: 14px;
+            border-radius: 12px;
+            border: none;
+            background: linear-gradient(135deg, var(--primary), #00d477);
+            color: #000;
+            font-weight: 700;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px var(--primary-glow);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px var(--primary-glow);
+        }
+
+        .btn-ghost {
+            background: transparent;
+            border: 1px solid var(--glass-border);
+            color: var(--text-dim);
+            padding: 10px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-ghost:hover {
+            background: var(--glass);
+            color: #fff;
+            border-color: #fff;
+        }
+
+        /* Reuse styles from Desktop for Consistency */
+        .item-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+        }
+
+        .item-card {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 16px;
+            transition: all 0.3s ease;
+        }
+
+        .price-zone-card {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .price-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 10px;
+        }
+
+        .price-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 10px;
+        }
+
+        .low-price-alert {
+            border: 1px solid var(--primary);
+            background: var(--primary-glow);
+            color: var(--primary);
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(8px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .edit-modal {
+            background: #16161b;
+            border: 1px solid var(--glass-border);
+            padding: 30px;
+            border-radius: 24px;
+            width: 400px;
+        }
+
+        .zone-chip {
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 11px;
+            background: var(--glass);
+            border: 1px solid var(--glass-border);
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .zone-chip.active {
+            background: var(--primary);
+            color: #000;
+            border-color: var(--primary);
+        }
+
+        .profile-tab {
+            flex: 1;
+            padding: 8px 0;
+            text-align: center;
+            border-radius: 8px;
+            background: var(--glass);
+            border: 1px solid var(--glass-border);
+            color: var(--text-dim);
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .profile-tab.active {
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            border-color: rgba(255, 255, 255, 0.3);
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.05);
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="login-overlay" id="loginOverlay">
+        <div class="login-card">
+            <h2 style="color: var(--primary)">DF TRACKER WEB</h2>
+            <p style="color: var(--text-dim); margin-bottom: 30px">Vui lòng đăng nhập để bắt đầu</p>
+            <input type="password" id="loginPass" placeholder="Mật khẩu..." style="margin-bottom: 20px">
+            <button class="btn-primary" onclick="handleLogin()">Đăng Nhập</button>
+        </div>
+    </div>
+
+    <div class="app-container" id="appContainer">
+        <!-- SIDEBAR -->
+        <div class="panel sidebar">
+            <div class="profile-tabs" id="profileTabs" style="display:flex; gap: 5px; margin-bottom: 20px;">
+                <!-- Auto generated tabs 1-5 -->
+            </div>
+
+            <div class="logo-section" style="margin-bottom: 25px;">
+                <div class="logo-text">DF TRACKER PRO</div>
+            </div>
+
+            <div class="input-group">
+                <label>Vùng Giao Dịch</label>
+                <div id="zoneContainer" style="display: flex; flex-wrap: wrap; gap: 8px;"></div>
+            </div>
+
+            <div class="input-group">
+                <label>Cấu hình Server (Profile Hiện Tại)</label>
+                <input id="setCookie" placeholder="Dán Cookie vào đây..." style="margin-bottom:10px"
+                    onchange="updateServerConfig()">
+                <input id="setInterval" type="number" placeholder="Interval (ms)..." value="60000"
+                    onchange="updateServerConfig()" style="margin-bottom:10px">
+
+                <label>Cấu hình Discord</label>
+                <div style="display:flex; align-items:center; gap: 10px; margin-bottom:10px">
+                    <button id="notifyBtn" class="btn-ghost" style="flex:1; font-size:12px; padding: 8px"
+                        onclick="toggleNotification()">🔔 Tắt</button>
+                </div>
+                <input id="setWebhook" placeholder="Webhook URL..." style="margin-bottom:10px"
+                    onchange="updateServerConfig()">
+                <input id="setRoleId" placeholder="Role ID..." style="margin-bottom:10px"
+                    onchange="updateServerConfig()">
+            </div>
+
+            <div class="input-group">
+                <label>Thêm Vật Phẩm</label>
+                <input id="searchTerm" placeholder="Tên..." style="margin-bottom:10px">
+                <input id="alertPrice" type="text" placeholder="Giá..." style="margin-bottom:10px"
+                    oninput="formatNumberInput(this)">
+                <select id="mode" style="margin-bottom:10px">
+                    <option value="name">Tên</option>
+                    <option value="internal">ID Nội bộ</option>
+                </select>
+                <button class="btn-primary" onclick="addItem()">Thêm Vật Phẩm</button>
+            </div>
+
+            <div class="input-group" style="border-top: 1px solid var(--glass-border); padding-top: 20px;">
+                <label>Công cụ</label>
+                <button class="btn-ghost"
+                    style="width:100%; margin-bottom:10px; border-color: var(--primary); color: var(--primary)"
+                    onclick="openImportModal()">📥 Nhập từ Desktop</button>
+            </div>
+
+            <div style="margin-top: auto">
+                <button class="btn-ghost" style="width:100%" onclick="logout()">Đăng xuất</button>
+            </div>
+        </div>
+
+        <!-- MAIN -->
+        <div class="panel main-content">
+            <div style="display:flex; align-items: center; justify-content: space-between; margin-bottom: 30px">
+                <div style="display:flex; gap: 15px;">
+                    <button class="btn-primary" id="startBtn" style="width: auto; padding: 12px 30px"
+                        onclick="startScraper()">Bắt đầu</button>
+                    <button class="btn-ghost" id="stopBtn" style="padding: 12px 30px"
+                        onclick="stopScraper()">Dừng</button>
+                    <button class="btn-ghost" style="padding: 12px 20px" onclick="manualRefresh()">🔄 Làm mới</button>
+                </div>
+                <div id="statusBadge"
+                    style="padding: 8px 16px; border-radius: 20px; font-size: 12px; font-weight: 600; background: var(--glass); border: 1px solid var(--glass-border);">
+                    Status: <span id="statusText" style="color: var(--text-dim)">Checking...</span>
+                </div>
+            </div>
+
+            <section>
+                <h3 style="color:var(--text-dim); font-size:14px; text-transform:uppercase; margin-bottom:20px">Danh mục
+                    theo dõi</h3>
+                <div class="item-grid" id="itemColumns"></div>
+            </section>
+
+            <section style="margin-top: 40px">
+                <h3 style="color:var(--text-dim); font-size:14px; text-transform:uppercase; margin-bottom:20px">Bảng giá
+                    trực tiếp</h3>
+                <div id="priceTable"></div>
+            </section>
+        </div>
+    </div>
+
+    <!-- IMPORT MODAL -->
+    <div class="modal-overlay" id="importModal">
+        <div class="edit-modal" style="width: 500px;">
+            <h3 style="color: var(--primary); margin-top: 0">Nhập cấu hình từ Desktop</h3>
+            <p style="font-size: 12px; color: var(--text-dim); margin-bottom: 20px;">Mở file <b>config.json</b> ở thư
+                mục Desktop, copy toàn bộ nội dung và dán vào đây.</p>
+            <textarea id="importArea"
+                style="width: 100%; height: 200px; background: rgba(0,0,0,0.3); border: 1px solid var(--glass-border); border-radius: 12px; color: #fff; padding: 15px; font-family: monospace; font-size: 12px; margin-bottom: 20px;"
+                placeholder='{ "items": [...], ... }'></textarea>
+            <div style="display: flex; gap: 10px;">
+                <button class="btn-primary" style="flex: 1" onclick="processImport()">Nạp cấu hình</button>
+                <button class="btn-ghost" style="flex: 1" onclick="closeImportModal()">Hủy</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- EDIT MODAL -->
+    <div class="modal-overlay" id="editModal">
+        <div class="edit-modal">
+            <h3 style="color: var(--primary); margin-top: 0">Sửa Vật Phẩm</h3>
+            <input id="editItemIndex" type="hidden">
+            <div class="input-group">
+                <label>Tên Vật Phẩm</label>
+                <input id="editSearchTerm" placeholder="Tên...">
+            </div>
+            <div class="input-group">
+                <label>Giá Báo Động</label>
+                <input id="editAlertPrice" type="text" placeholder="Giá..." oninput="formatNumberInput(this)">
+            </div>
+            <div style="display: flex; gap: 10px; margin-top: 20px;">
+                <button class="btn-primary" style="flex: 1" onclick="saveEdit()">Lưu thay đổi</button>
+                <button class="btn-ghost" style="flex: 1" onclick="closeEditModal()">Hủy</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let token = localStorage.getItem('token');
+        let currentProfileId = 1;
+        const ZONES = ["OP", "CV", "SEZ", "NZ", "NWZ", "NEZ", "SWZ", "SZ", "WZ", "EZ", "CZ"];
+
+        /* ================= FORMATTERS ================= */
+        function formatNumberInput(input) {
+            let value = input.value.replace(/,/g, '');
+            if (value === '') return;
+            let formatted = Number(value).toLocaleString('en-US');
+            if (formatted !== 'NaN') {
+                input.value = formatted;
+            }
+        }
+
+        function parseFormattedNumber(val) {
+            if (typeof val === 'string') {
+                return parseInt(val.replace(/,/g, '')) || 0;
+            }
+            return parseInt(val) || 0;
+        }
+
+        async function handleLogin() {
+            const password = document.getElementById("loginPass").value;
+            const res = await fetch('/api/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ password })
+            });
+            const data = await res.json();
+            if (data.success) {
+                token = data.token;
+                localStorage.setItem('token', token);
+                initApp();
+            } else {
+                alert("Sai mật khẩu");
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem('token');
+            location.reload();
+        }
+
+        function renderTabs() {
+            const container = document.getElementById("profileTabs");
+            container.innerHTML = "";
+            for (let i = 1; i <= 5; i++) {
+                const tab = document.createElement("div");
+                tab.className = `profile-tab ${i === currentProfileId ? 'active' : ''}`;
+                tab.textContent = `Acc. ${i}`;
+                tab.onclick = () => switchProfile(i);
+                container.appendChild(tab);
+            }
+        }
+
+        async function switchProfile(id) {
+            if (id === currentProfileId) return;
+
+            // 1. Chuyển UI
+            currentProfileId = id;
+            renderTabs();
+
+            // 2. Load cấu hình mới
+            try {
+                const res = await fetch('/api/config', { headers: { 'Authorization': token } });
+                if (res.status === 401) return logout();
+                const config = await res.json();
+
+                if (!config.profiles) return;
+                const profile = config.profiles.find(p => p.id === currentProfileId);
+
+                document.getElementById("setCookie").value = profile.cookie || "";
+                document.getElementById("setInterval").value = profile.interval || 60000;
+                document.getElementById("setWebhook").value = profile.webhook || "";
+                document.getElementById("setRoleId").value = profile.roleId || "";
+
+                renderZones(profile);
+                loadItems(profile);
+                updateNotifyButtonUI(profile);
+
+                // Xóa rác UI cũ trước khi chờ giá mới
+                document.getElementById("priceTable").innerHTML = "";
+
+                updatePrices();
+                updateStatus();
+            } catch (e) {
+                console.error("Lỗi chuyển profile:", e);
+            }
+        }
+
+        async function initApp() {
+            if (!token) return;
+            document.getElementById("loginOverlay").style.display = "none";
+            document.getElementById("appContainer").classList.add("active");
+
+            renderTabs();
+
+            try {
+                const res = await fetch('/api/config', { headers: { 'Authorization': token } });
+                if (res.status === 401) return logout();
+                const config = await res.json();
+
+                if (!config.profiles) return;
+                const profile = config.profiles.find(p => p.id === currentProfileId);
+
+                document.getElementById("setCookie").value = profile.cookie || "";
+                document.getElementById("setInterval").value = profile.interval || 60000;
+                document.getElementById("setWebhook").value = profile.webhook || "";
+                document.getElementById("setRoleId").value = profile.roleId || "";
+
+                renderZones(profile);
+                loadItems(profile);
+                updateNotifyButtonUI(profile);
+
+                updatePrices();
+                updateStatus();
+
+                setInterval(updatePrices, 5000);
+                setInterval(updateStatus, 3000);
+
+                // Tự động start tất cả các profile ĐÃ CÓ COOKIE
+                config.profiles.forEach(async (p) => {
+                    if (p.cookie) {
+                        await fetch('/api/start', { method: 'POST', headers: { 'Authorization': token, 'Content-Type': 'application/json' }, body: JSON.stringify({ profileId: p.id }) });
+                    }
+                });
+            } catch (e) {
+                console.error("Lỗi khởi tạo:", e);
+            }
+        }
+
+        async function updateServerConfig() {
+            const res = await fetch('/api/config', { headers: { 'Authorization': token } });
+            const config = await res.json();
+            const profileIndex = config.profiles.findIndex(p => p.id === currentProfileId);
+
+            config.profiles[profileIndex].cookie = document.getElementById("setCookie").value;
+            config.profiles[profileIndex].interval = parseInt(document.getElementById("setInterval").value);
+            config.profiles[profileIndex].webhook = document.getElementById("setWebhook").value;
+            config.profiles[profileIndex].roleId = document.getElementById("setRoleId").value;
+
+            await fetch('/api/config', {
+                method: 'POST',
+                headers: { 'Authorization': token, 'Content-Type': 'application/json' },
+                body: JSON.stringify(config)
+            });
+        }
+
+        async function toggleNotification() {
+            const res = await fetch('/api/config', { headers: { 'Authorization': token } });
+            const config = await res.json();
+            const pIndex = config.profiles.findIndex(p => p.id === currentProfileId);
+
+            config.profiles[pIndex].discordEnabled = !config.profiles[pIndex].discordEnabled;
+            await saveConfig(config);
+            updateNotifyButtonUI(config.profiles[pIndex]);
+        }
+
+        function updateNotifyButtonUI(profile) {
+            const btn = document.getElementById("notifyBtn");
+            btn.innerHTML = profile.discordEnabled ? "🔔 Đang bật" : "🔕 Đang tắt";
+            btn.style.color = profile.discordEnabled ? "var(--primary)" : "var(--text-dim)";
+            btn.style.borderColor = profile.discordEnabled ? "var(--primary)" : "var(--glass-border)";
+        }
+
+        function renderZones(profile) {
+            const container = document.getElementById("zoneContainer");
+            container.innerHTML = "";
+            const selectedZones = profile.selectedZones || [];
+            ZONES.forEach((zone, i) => {
+                const chip = document.createElement("div");
+                chip.className = `zone-chip ${selectedZones.includes(i) ? 'active' : ''}`;
+                chip.textContent = zone;
+                chip.onclick = async () => {
+                    const res = await fetch('/api/config', { headers: { 'Authorization': token } });
+                    const config = await res.json();
+                    const pIndex = config.profiles.findIndex(p => p.id === currentProfileId);
+
+                    if (!config.profiles[pIndex].selectedZones) config.profiles[pIndex].selectedZones = [];
+
+                    const idx = config.profiles[pIndex].selectedZones.indexOf(i);
+                    if (idx > -1) config.profiles[pIndex].selectedZones.splice(idx, 1);
+                    else config.profiles[pIndex].selectedZones.push(i);
+
+                    await fetch('/api/config', { method: 'POST', headers: { 'Authorization': token, 'Content-Type': 'application/json' }, body: JSON.stringify(config) });
+                    renderZones(config.profiles[pIndex]);
+                };
+                container.appendChild(chip);
+            });
+        }
+
+        function loadItems(profile) {
+            const container = document.getElementById("itemColumns");
+            container.innerHTML = "";
+            const items = profile.items || [];
+            items.forEach((item, i) => {
+                const card = document.createElement("div");
+                card.className = "item-card";
+                card.innerHTML = `
+                    <div style="font-weight: 700; color: var(--primary)">${item.searchTerm}</div>
+                    <div style="font-size: 12px; color: var(--text-dim)">Alert: $${Number(item.alert).toLocaleString()}</div>
+                    <div style="margin-top: 10px; display: flex; gap: 10px;">
+                        <span style="color: var(--primary); cursor: pointer; font-size: 12px" onclick="openEditModal(${i})">Sửa</span>
+                        <span style="color: var(--danger); cursor: pointer; font-size: 12px" onclick="removeItem(${i})">Xóa</span>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        async function addItem() {
+            const searchTerm = document.getElementById("searchTerm").value.trim();
+            const alertPrice = parseFormattedNumber(document.getElementById("alertPrice").value);
+
+            if (!searchTerm || !alertPrice) {
+                alert("Vui lòng nhập tên vật phẩm và giá báo động!");
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/config', { headers: { 'Authorization': token } });
+                const config = await res.json();
+                const pIndex = config.profiles.findIndex(p => p.id === currentProfileId);
+
+                if (!config.profiles[pIndex].items) config.profiles[pIndex].items = [];
+
+                config.profiles[pIndex].items.push({
+                    searchTerm: searchTerm,
+                    alert: alertPrice,
+                    mode: document.getElementById("mode").value,
+                    alertEnabled: true
+                });
+
+                await fetch('/api/config', {
+                    method: 'POST',
+                    headers: { 'Authorization': token, 'Content-Type': 'application/json' },
+                    body: JSON.stringify(config)
+                });
+
+                document.getElementById("searchTerm").value = "";
+                document.getElementById("alertPrice").value = "";
+                loadItems(config.profiles[pIndex]);
+            } catch (error) {
+                console.error("Lỗi khi thêm vật phẩm:", error);
+                alert("Lỗi kết nối Server! Vui lòng thử lại.");
+            }
+        }
+
+        /* ================= EDIT LOGIC ================= */
+        async function openEditModal(index) {
+            const res = await fetch('/api/config', { headers: { 'Authorization': token } });
+            const config = await res.json();
+            const profile = config.profiles.find(p => p.id === currentProfileId);
+            const item = profile.items[index];
+
+            document.getElementById("editItemIndex").value = index;
+            document.getElementById("editSearchTerm").value = item.searchTerm;
+
+            const priceInput = document.getElementById("editAlertPrice");
+            priceInput.value = item.alert.toLocaleString();
+
+            document.getElementById("editModal").style.display = "flex";
+        }
+
+        function closeEditModal() {
+            document.getElementById("editModal").style.display = "none";
+        }
+
+        async function saveEdit() {
+            const index = parseInt(document.getElementById("editItemIndex").value);
+            const searchTerm = document.getElementById("editSearchTerm").value.trim();
+            const alertPrice = parseFormattedNumber(document.getElementById("editAlertPrice").value);
+
+            if (!searchTerm || isNaN(alertPrice)) return;
+
+            try {
+                const res = await fetch('/api/config', { headers: { 'Authorization': token } });
+                const config = await res.json();
+                const pIndex = config.profiles.findIndex(p => p.id === currentProfileId);
+
+                config.profiles[pIndex].items[index].searchTerm = searchTerm;
+                config.profiles[pIndex].items[index].alert = alertPrice;
+
+                await saveConfig(config);
+                closeEditModal();
+                loadItems(config.profiles[pIndex]);
+            } catch (e) {
+                alert("Lỗi khi lưu!");
+            }
+        }
+
+        async function saveConfig(c) {
+            await fetch('/api/config', {
+                method: 'POST',
+                headers: { 'Authorization': token, 'Content-Type': 'application/json' },
+                body: JSON.stringify(c)
+            });
+        }
+
+        async function updatePrices() {
+            const res = await fetch(`/api/prices?profileId=${currentProfileId}`, { headers: { 'Authorization': token } });
+            const table = await res.json();
+            const container = document.getElementById("priceTable");
+            container.innerHTML = "";
+            table.forEach(zone => {
+                const zoneCard = document.createElement("div");
+                zoneCard.className = "price-zone-card";
+                zoneCard.innerHTML = `<div style="font-weight: 700; margin-bottom: 15px; color: var(--text-dim)">📍 ${zone.zone}</div>`;
+                const grid = document.createElement("div");
+                grid.className = "price-grid";
+                zone.items.forEach(item => {
+                    const div = document.createElement("div");
+                    div.className = `price-item ${item.alert ? 'low-price-alert' : ''}`;
+                    div.innerHTML = `<span>${item.name}</span><span>$${item.price?.toLocaleString() || 'N/A'}</span>`;
+                    grid.appendChild(div);
+                });
+                zoneCard.appendChild(grid);
+                container.appendChild(zoneCard);
+            });
+        }
+
+        async function updateStatus() {
+            try {
+                const res = await fetch(`/api/status?profileId=${currentProfileId}`, { headers: { 'Authorization': token } });
+                const data = await res.json();
+                const statusText = document.getElementById("statusText");
+                const startBtn = document.getElementById("startBtn");
+                const stopBtn = document.getElementById("stopBtn");
+
+                if (data.isRunning) {
+                    statusText.textContent = data.isScanning ? "Scaning..." : "Running (Idle)";
+                    statusText.style.color = "var(--primary)";
+                    startBtn.style.opacity = "0.5";
+                    startBtn.style.pointerEvents = "none";
+                    stopBtn.style.opacity = "1";
+                    stopBtn.style.pointerEvents = "all";
+                } else {
+                    statusText.textContent = "Stopped";
+                    statusText.style.color = "var(--danger)";
+                    startBtn.style.opacity = "1";
+                    startBtn.style.pointerEvents = "all";
+                    stopBtn.style.opacity = "0.5";
+                    stopBtn.style.pointerEvents = "none";
+                }
+            } catch (e) { }
+        }
+
+        async function removeItem(index) {
+            const res = await fetch('/api/config', { headers: { 'Authorization': token } });
+            const config = await res.json();
+            const pIndex = config.profiles.findIndex(p => p.id === currentProfileId);
+
+            config.profiles[pIndex].items.splice(index, 1);
+            await fetch('/api/config', { method: 'POST', headers: { 'Authorization': token, 'Content-Type': 'application/json' }, body: JSON.stringify(config) });
+            loadItems(config.profiles[pIndex]);
+        }
+
+        async function startScraper() {
+            await fetch('/api/start', { method: 'POST', headers: { 'Authorization': token, 'Content-Type': 'application/json' }, body: JSON.stringify({ profileId: currentProfileId }) });
+            updateStatus();
+        }
+        async function stopScraper() {
+            await fetch('/api/stop', { method: 'POST', headers: { 'Authorization': token, 'Content-Type': 'application/json' }, body: JSON.stringify({ profileId: currentProfileId }) });
+            updateStatus();
+        }
+        async function manualRefresh() {
+            const statusText = document.getElementById("statusText");
+            statusText.textContent = "Refreshing...";
+            await fetch('/api/refresh', { method: 'POST', headers: { 'Authorization': token, 'Content-Type': 'application/json' }, body: JSON.stringify({ profileId: currentProfileId }) });
+            await updatePrices();
+            updateStatus();
+        }
+
+        /* ================= IMPORT LOGIC ================= */
+        function openImportModal() {
+            document.getElementById("importModal").style.display = "flex";
+            document.getElementById("importArea").value = "";
+        }
+
+        function closeImportModal() {
+            document.getElementById("importModal").style.display = "none";
+        }
+
+        async function processImport() {
+            const raw = document.getElementById("importArea").value.trim();
+            if (!raw) return;
+
+            try {
+                const desktopConfig = JSON.parse(raw);
+
+                // 1. Load full web config
+                const res = await fetch('/api/config', { headers: { 'Authorization': token } });
+                const config = await res.json();
+                const pIndex = config.profiles.findIndex(p => p.id === currentProfileId);
+
+                // 2. Map desktop config to web profile
+                // Desktop stores global settings, Web stores per profile
+                const profile = config.profiles[pIndex];
+
+                if (desktopConfig.items) {
+                    profile.items = desktopConfig.items.map(it => ({
+                        searchTerm: it.searchTerm || it.name,
+                        alert: it.alertPrice || it.alert || 0,
+                        mode: it.mode || "name",
+                        alertEnabled: it.alertEnabled !== false
+                    }));
+                }
+
+                if (desktopConfig.cookie) profile.cookie = desktopConfig.cookie;
+                if (desktopConfig.interval) profile.interval = desktopConfig.interval;
+                if (desktopConfig.webhook) profile.webhook = desktopConfig.webhook;
+                if (desktopConfig.roleId) profile.roleId = desktopConfig.roleId;
+                if (desktopConfig.discordEnabled !== undefined) profile.discordEnabled = desktopConfig.discordEnabled;
+                if (desktopConfig.selectedZones) profile.selectedZones = desktopConfig.selectedZones;
+
+                // 3. Save back
+                await saveConfig(config);
+
+                // 4. Update UI
+                closeImportModal();
+                switchProfile(currentProfileId); // Refresh UI for current profile
+                alert("Đã nhập cấu hình thành công!");
+
+            } catch (e) {
+                console.error(e);
+                alert("Lỗi: Định dạng file config.json không hợp lệ!");
+            }
+        }
+
+        if (token) {
+            initApp();
+        }
+    </script>
+</body>
+
+</html>
