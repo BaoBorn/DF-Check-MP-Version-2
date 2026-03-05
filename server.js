@@ -357,4 +357,14 @@ app.post('/api/stop', auth, (req, res) => {
 });
 app.listen(PORT, () => {
     console.log(`Web Scraper Pro running at http://localhost:${PORT}`);
+
+    // Tự động khởi chạy tất cả Profile có Cookie khi Server boot
+    const config = loadConfig();
+    config.profiles.forEach(profile => {
+        if (profile.cookie) {
+            console.log(`🚀 Tự động chạy Profile ${profile.id}...`);
+            runCycle(profile.id);
+            intervalRefs[profile.id] = setInterval(() => runCycle(profile.id), profile.interval || 60000);
+        }
+    });
 });
