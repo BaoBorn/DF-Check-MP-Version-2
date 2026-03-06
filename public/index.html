@@ -298,8 +298,11 @@
     <div class="app-container" id="appContainer">
         <!-- SIDEBAR -->
         <div class="panel sidebar">
-            <div class="profile-tabs" id="profileTabs" style="display:flex; gap: 5px; margin-bottom: 20px;">
+            <div class="profile-tabs" id="profileTabs"
+                style="display:flex; gap: 5px; margin-bottom: 20px; align-items: center;">
                 <!-- Auto generated tabs 1-5 -->
+                <button class="btn-ghost" style="padding: 2px 8px; font-size: 16px; border-radius: 6px;"
+                    onclick="addNewProfile()">+</button>
             </div>
 
             <div class="logo-section" style="margin-bottom: 25px;">
@@ -346,6 +349,9 @@
                 <button class="btn-ghost"
                     style="width:100%; margin-bottom:10px; border-color: var(--primary); color: var(--primary)"
                     onclick="openImportModal()">📥 Nhập từ Desktop</button>
+                <button class="btn-ghost"
+                    style="width:100%; margin-bottom:10px; border-color: var(--primary); color: var(--primary)"
+                    onclick="exportConfig()">📤 Xuất Config</button>
             </div>
 
             <div style="margin-top: auto">
@@ -463,16 +469,78 @@
             location.reload();
         }
 
-        function renderTabs() {
+        async function renderTabs() {
+            const res = await fetch('/api/config', { headers: { 'Authorization': token } });
+            const config = await res.json();
+            const profiles = config.profiles || [];
+
             const container = document.getElementById("profileTabs");
+            // Clear but keep the "+" button
+            const addButton = container.querySelector('button');
             container.innerHTML = "";
-            for (let i = 1; i <= 5; i++) {
+
+            profiles.forEach(p => {
                 const tab = document.createElement("div");
-                tab.className = `profile-tab ${i === currentProfileId ? 'active' : ''}`;
-                tab.textContent = `Acc. ${i}`;
-                tab.onclick = () => switchProfile(i);
+                tab.className = `profile-tab ${p.id === currentProfileId ? 'active' : ''}`;
+                tab.style.position = "relative";
+                tab.innerHTML = `
+                    Acc. ${p.id}
+                    <span style="position:absolute; top:-5px; right:-2px; color:var(--danger); font-size:10px; cursor:pointer; opacity:0.6;" onclick="deleteProfile(event, ${p.id})">×</span>
+                `;
+                tab.onclick = () => switchProfile(p.id);
                 container.appendChild(tab);
+            });
+            container.appendChild(addButton);
+        }
+
+        async function addNewProfile() {
+            const res = await fetch('/api/profile/add', {
+                method: 'POST',
+                headers: { 'Authorization': token }
+            });
+            const data = await res.json();
+            if (data.success) {
+                await renderTabs();
+                switchProfile(data.profile.id);
             }
+        }
+
+        async function deleteProfile(event, id) {
+            event.stopPropagation();
+            if (!confirm(`Bạn có chắc muốn xóa Profile ${id}?`)) return;
+
+            const res = await fetch('/api/profile/delete', {
+                method: 'POST',
+                headers: { 'Authorization': token, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ profileId: id })
+            });
+            const data = await res.json();
+            if (data.success) {
+                if (currentProfileId === id) {
+                    const configRes = await fetch('/api/config', { headers: { 'Authorization': token } });
+                    const config = await configRes.json();
+                    currentProfileId = config.profiles[0].id;
+                }
+                await renderTabs();
+                switchProfile(currentProfileId);
+            } else {
+                alert(data.error || "Không thể xóa");
+            }
+        }
+
+        async function exportConfig() {
+            const res = await fetch('/api/config/export', {
+                headers: { 'Authorization': token }
+            });
+            const blob = await res.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'config.json';
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
         }
 
         async function switchProfile(id) {
