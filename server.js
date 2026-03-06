@@ -103,6 +103,7 @@ let intervalRefs = {}; // { profileId: intervalId }
 let priceCache = {};   // { 'itemName_zone_profileId': price }
 let notifiedPriceCache = {}; // { 'itemName_zone_profileId': lastNotifiedPrice }
 let lastMessageId = {}; // { profileId: messageId }
+let lastBargainKeys = {}; // { profileId: string }
 
 async function sendDiscordEmbed(webhook, itemsFound, zones, roleId) {
     if (!webhook || itemsFound.length === 0) return null;
@@ -264,17 +265,31 @@ async function runCycle(profileId) {
         }
         latestPrices[profileId] = updateTable;
 
-        // Gửi Discord Alert nếu có vật phẩm mới hoặc đổi giá
-        if (profile.discordEnabled && newHits.length > 0) {
-            if (lastMessageId[profileId]) {
-                await deleteDiscordMessage(profile.webhook, lastMessageId[profileId]);
+        // Xử lý thông báo Discord
+        const currentBargainKeys = currentBargains.map(b => `${b.name}_${b.zone}_${b.price}`).sort().join('|');
+        const contentChanged = currentBargainKeys !== (lastBargainKeys[profileId] || "");
+
+        if (profile.discordEnabled) {
+            if (newHits.length > 0 || contentChanged) {
+                // Có thay đổi (đồ mới, đổi giá, hoặc đồ cũ biến mất)
+                if (lastMessageId[profileId]) {
+                    await deleteDiscordMessage(profile.webhook, lastMessageId[profileId]);
+                }
+
+                if (currentBargains.length > 0) {
+                    const shouldTag = newHits.length > 0;
+                    lastMessageId[profileId] = await sendDiscordEmbed(
+                        profile.webhook,
+                        currentBargains,
+                        selectedZones,
+                        shouldTag ? profile.roleId : "" // Chỉ truyền RoleId nếu cần Tag
+                    );
+                    lastBargainKeys[profileId] = currentBargainKeys;
+                } else {
+                    lastMessageId[profileId] = null;
+                    lastBargainKeys[profileId] = "";
+                }
             }
-            lastMessageId[profileId] = await sendDiscordEmbed(
-                profile.webhook,
-                currentBargains, // Gửi tất cả đồ đang hời
-                selectedZones,
-                profile.roleId  // Tag vì có hit mới
-            );
         }
 
         console.log(`--- Quét xong [Profile ${profileId}] ---`);
