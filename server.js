@@ -214,7 +214,8 @@ async function runCycle(profileId) {
         if (selectedZones.length === 0) selectedZones.push(TRADE_ZONES[0]);
 
         let updateTable = [];
-        let itemsToAlert = [];
+        let currentBargains = [];
+        let newHits = [];
 
         for (let zone of selectedZones) {
             console.log(`[Profile ${profileId}] Đang quét vùng: ${zone.name}...`);
@@ -224,25 +225,27 @@ async function runCycle(profileId) {
                 const result = await searchItem(item, zone.tradezone, profile.cookie);
 
                 let currentPrice = result ? result.price : (priceCache[cacheKey] || null);
-                let isAlert = false;
+                let hitResult = null;
 
                 if (result) {
                     priceCache[cacheKey] = result.price;
-
-                    // Logic V2.0: <= alert và chỉ báo khi giá đổi
                     const isBelowThreshold = result.price <= item.alert;
-                    const hasPriceChanged = notifiedPriceCache[cacheKey] !== result.price;
 
-                    isAlert = item.alertEnabled !== false && isBelowThreshold && hasPriceChanged;
-
-                    if (isAlert) {
-                        itemsToAlert.push({
+                    if (isBelowThreshold) {
+                        hitResult = {
                             ...result,
                             zone: zone.name,
                             alertPrice: item.alert
-                        });
-                        notifiedPriceCache[cacheKey] = result.price;
-                    } else if (!isBelowThreshold) {
+                        };
+                        currentBargains.push(hitResult);
+
+                        const hasPriceChanged = notifiedPriceCache[cacheKey] !== result.price;
+                        if (item.alertEnabled !== false && hasPriceChanged) {
+                            newHits.push(hitResult);
+                            notifiedPriceCache[cacheKey] = result.price;
+                        }
+                    } else {
+                        // Reset notification cache if price goes above alert
                         delete notifiedPriceCache[cacheKey];
                     }
 
@@ -254,23 +257,23 @@ async function runCycle(profileId) {
                 zoneData.items.push({
                     name: result ? result.name : item.searchTerm,
                     price: currentPrice,
-                    alert: isAlert
+                    alert: hitResult !== null
                 });
             }
             updateTable.push(zoneData);
         }
         latestPrices[profileId] = updateTable;
 
-        // Gửi Discord Alert
-        if (profile.discordEnabled && itemsToAlert.length > 0) {
+        // Gửi Discord Alert nếu có vật phẩm mới hoặc đổi giá
+        if (profile.discordEnabled && newHits.length > 0) {
             if (lastMessageId[profileId]) {
                 await deleteDiscordMessage(profile.webhook, lastMessageId[profileId]);
             }
             lastMessageId[profileId] = await sendDiscordEmbed(
                 profile.webhook,
-                itemsToAlert,
+                currentBargains, // Gửi tất cả đồ đang hời
                 selectedZones,
-                profile.roleId
+                profile.roleId  // Tag vì có hit mới
             );
         }
 
