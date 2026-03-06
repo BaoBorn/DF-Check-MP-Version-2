@@ -312,6 +312,41 @@ app.post('/api/config', auth, (req, res) => {
     res.json({ success: true });
 });
 
+// Export config file
+app.get('/api/config/export', auth, (req, res) => {
+    res.download(configPath, 'config.json');
+});
+
+// Add new profile
+app.post('/api/profile/add', auth, (req, res) => {
+    const config = loadConfig();
+    const nextId = config.profiles.length > 0 ? Math.max(...config.profiles.map(p => p.id)) + 1 : 1;
+    const newProfile = createDefaultProfile(nextId);
+    config.profiles.push(newProfile);
+    saveConfig(config);
+    res.json({ success: true, profile: newProfile });
+});
+
+// Delete profile
+app.post('/api/profile/delete', auth, (req, res) => {
+    const { profileId } = req.body;
+    const config = loadConfig();
+    const index = config.profiles.findIndex(p => p.id === parseInt(profileId));
+
+    if (index === -1) return res.status(400).json({ error: "Profile not found" });
+    if (config.profiles.length <= 1) return res.status(400).json({ error: "Cannot delete the last profile" });
+
+    // Stop scraper if running
+    if (intervalRefs[profileId]) {
+        clearInterval(intervalRefs[profileId]);
+        delete intervalRefs[profileId];
+    }
+
+    config.profiles.splice(index, 1);
+    saveConfig(config);
+    res.json({ success: true });
+});
+
 app.get('/api/status', auth, (req, res) => {
     const pId = req.query.profileId || 1;
     res.json({
