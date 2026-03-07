@@ -129,7 +129,7 @@ async function sendDiscordEmbed(webhook, itemsFound, zones, roleId) {
 
     try {
         const payload = { embeds };
-        if (roleId) payload.content = `<@&${roleId}> Phát hiện đồ giá rẻ!`;
+        if (roleId) payload.content = `🔔 Phát hiện đồ giá rẻ!`;
 
         const res = await axios.post(webhook + "?wait=true", payload);
         return res.data.id;
@@ -255,10 +255,13 @@ async function runCycle(profileId) {
                     console.log(`❌ [${zone.name} - P${profileId}] ${item.searchTerm}: N/A`);
                 }
 
+                const isNew = result && (notifiedPriceCache[cacheKey] !== result.price);
+
                 zoneData.items.push({
                     name: result ? result.name : item.searchTerm,
                     price: currentPrice,
-                    alert: hitResult !== null
+                    alert: hitResult !== null,
+                    isNew: isNew
                 });
             }
             updateTable.push(zoneData);
