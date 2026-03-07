@@ -223,6 +223,25 @@
             color: var(--primary);
         }
 
+        .new-badge {
+            background: #ffde59;
+            color: #000;
+            font-size: 10px;
+            font-weight: 800;
+            padding: 2px 6px;
+            border-radius: 4px;
+            margin-left: 8px;
+            text-transform: uppercase;
+            box-shadow: 0 0 10px rgba(255, 222, 89, 0.4);
+            animation: pulse-yellow 2s infinite;
+        }
+
+        @keyframes pulse-yellow {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
         .modal-overlay {
             position: fixed;
             top: 0;
@@ -801,7 +820,13 @@
                 zone.items.forEach(item => {
                     const div = document.createElement("div");
                     div.className = `price-item ${item.alert ? 'low-price-alert' : ''}`;
-                    div.innerHTML = `<span>${item.name}</span><span>$${item.price?.toLocaleString() || 'N/A'}</span>`;
+                    
+                    let itemNameHtml = `<span>${item.name}</span>`;
+                    if (item.isNew) {
+                        itemNameHtml = `<div style="display:flex; align-items:center;"><span>${item.name}</span><span class="new-badge">NEW</span></div>`;
+                    }
+
+                    div.innerHTML = `${itemNameHtml}<span>$${item.price?.toLocaleString() || 'N/A'}</span>`;
                     grid.appendChild(div);
                 });
                 zoneCard.appendChild(grid);
@@ -889,19 +914,21 @@
 
                 if (desktopConfig.items) {
                     profile.items = desktopConfig.items.map(it => ({
-                        searchTerm: it.searchTerm || it.name,
-                        alert: it.alertPrice || it.alert || 0,
+                        searchTerm: it.searchTerm || it.name || "",
+                        alert: parseInt(it.alertPrice || it.alert || 0),
                         mode: it.mode || "name",
                         alertEnabled: it.alertEnabled !== false
                     }));
                 }
 
                 if (desktopConfig.cookie) profile.cookie = desktopConfig.cookie;
-                if (desktopConfig.interval) profile.interval = desktopConfig.interval;
+                if (desktopConfig.interval) profile.interval = parseInt(desktopConfig.interval);
                 if (desktopConfig.webhook) profile.webhook = desktopConfig.webhook;
                 if (desktopConfig.roleId) profile.roleId = desktopConfig.roleId;
-                if (desktopConfig.discordEnabled !== undefined) profile.discordEnabled = desktopConfig.discordEnabled;
-                if (desktopConfig.selectedZones) profile.selectedZones = desktopConfig.selectedZones;
+                if (desktopConfig.discordEnabled !== undefined) profile.discordEnabled = desktopConfig.discordEnabled === true;
+                if (desktopConfig.selectedZones) {
+                    profile.selectedZones = Array.isArray(desktopConfig.selectedZones) ? desktopConfig.selectedZones.map(z => parseInt(z)) : [];
+                }
 
                 // 3. Save back
                 await saveConfig(config);
@@ -913,7 +940,7 @@
 
             } catch (e) {
                 console.error(e);
-                alert("Lỗi: Định dạng file config.json không hợp lệ!");
+                alert("Lỗi: " + e.message);
             }
         }
 
