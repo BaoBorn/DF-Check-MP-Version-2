@@ -237,9 +237,17 @@
         }
 
         @keyframes pulse-yellow {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.05); }
-            100% { transform: scale(1); }
+            0% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.05);
+            }
+
+            100% {
+                transform: scale(1);
+            }
         }
 
         .modal-overlay {
@@ -562,8 +570,8 @@
             document.body.removeChild(a);
         }
 
-        async function switchProfile(id) {
-            if (id === currentProfileId) return;
+        async function switchProfile(id, force = false) {
+            if (id === currentProfileId && !force) return;
 
             // 1. Chuyển UI
             currentProfileId = id;
@@ -820,7 +828,7 @@
                 zone.items.forEach(item => {
                     const div = document.createElement("div");
                     div.className = `price-item ${item.alert ? 'low-price-alert' : ''}`;
-                    
+
                     let itemNameHtml = `<span>${item.name}</span>`;
                     if (item.isNew) {
                         itemNameHtml = `<div style="display:flex; align-items:center;"><span>${item.name}</span><span class="new-badge">NEW</span></div>`;
@@ -912,8 +920,19 @@
                 // Desktop stores global settings, Web stores per profile
                 const profile = config.profiles[pIndex];
 
-                if (desktopConfig.items) {
-                    profile.items = desktopConfig.items.map(it => ({
+                let importData = desktopConfig;
+
+                // Detect if it's a "Web Config" (has profiles array)
+                if (desktopConfig.profiles && Array.isArray(desktopConfig.profiles)) {
+                    // If importing a web config, find the corresponding profile or use the first one
+                    const matchedProfile = desktopConfig.profiles.find(p => p.id === currentProfileId) || desktopConfig.profiles[0];
+                    if (matchedProfile) {
+                        importData = matchedProfile;
+                    }
+                }
+
+                if (importData.items) {
+                    profile.items = importData.items.map(it => ({
                         searchTerm: it.searchTerm || it.name || "",
                         alert: parseInt(it.alertPrice || it.alert || 0),
                         mode: it.mode || "name",
@@ -921,13 +940,13 @@
                     }));
                 }
 
-                if (desktopConfig.cookie) profile.cookie = desktopConfig.cookie;
-                if (desktopConfig.interval) profile.interval = parseInt(desktopConfig.interval);
-                if (desktopConfig.webhook) profile.webhook = desktopConfig.webhook;
-                if (desktopConfig.roleId) profile.roleId = desktopConfig.roleId;
-                if (desktopConfig.discordEnabled !== undefined) profile.discordEnabled = desktopConfig.discordEnabled === true;
-                if (desktopConfig.selectedZones) {
-                    profile.selectedZones = Array.isArray(desktopConfig.selectedZones) ? desktopConfig.selectedZones.map(z => parseInt(z)) : [];
+                if (importData.cookie) profile.cookie = importData.cookie;
+                if (importData.interval) profile.interval = parseInt(importData.interval);
+                if (importData.webhook) profile.webhook = importData.webhook;
+                if (importData.roleId) profile.roleId = importData.roleId;
+                if (importData.discordEnabled !== undefined) profile.discordEnabled = importData.discordEnabled === true;
+                if (importData.selectedZones) {
+                    profile.selectedZones = Array.isArray(importData.selectedZones) ? importData.selectedZones.map(z => parseInt(z)) : [];
                 }
 
                 // 3. Save back
@@ -935,7 +954,7 @@
 
                 // 4. Update UI
                 closeImportModal();
-                switchProfile(currentProfileId); // Refresh UI for current profile
+                switchProfile(currentProfileId, true); // Refresh UI for current profile (forced)
                 alert("Đã nhập cấu hình thành công!");
 
             } catch (e) {
