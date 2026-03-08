@@ -129,12 +129,13 @@ async function sendDiscordEmbed(webhook, itemsFound, zones, roleId) {
 
     try {
         const payload = { embeds };
-        if (roleId) payload.content = `🔔 Phát hiện đồ giá rẻ!`;
+        payload.content = `🔔 **Phát hiện đồ giá rẻ!**`;
 
         const res = await axios.post(webhook + "?wait=true", payload);
+        console.log(`✅ Đã gửi webhook Discord thành công. ID: ${res.data.id}`);
         return res.data.id;
     } catch (err) {
-        console.error("Lỗi gửi Discord:", err.message);
+        console.error("❌ Lỗi gửi Discord:", err.response ? JSON.stringify(err.response.data) : err.message);
         return null;
     }
 }
