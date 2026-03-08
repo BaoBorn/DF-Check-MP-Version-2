@@ -28,8 +28,7 @@ function createDefaultProfile(id) {
         cookie: "",
         discordEnabled: false,
         webhook: "",
-        roleId: "",
-        items: []
+        roleId: ""
     }
 }
 
@@ -230,6 +229,7 @@ async function runCycle(profileId) {
 
                 let currentPrice = result ? result.price : (priceCache[cacheKey] || null);
                 let hitResult = null;
+                let isNew = false;
 
                 if (result) {
                     priceCache[cacheKey] = result.price;
@@ -248,64 +248,60 @@ async function runCycle(profileId) {
                     const hasPriceChanged = notifiedPriceCache[cacheKey] !== result.price;
                     if (item.alertEnabled !== false && hasPriceChanged) {
                         newHits.push(hitResult);
+                        isNew = true;
                         notifiedPriceCache[cacheKey] = result.price;
                     }
+                    console.log(`✅ [${zone.name} - P${profileId}] ${item.searchTerm}: $${result.price.toLocaleString()}`);
                 } else {
-                    // Reset notification cache if price goes above alert
+                    // Reset notification cache if price goes above alert or item not found
                     delete notifiedPriceCache[cacheKey];
+                    console.log(`❌ [${zone.name} - P${profileId}] ${item.searchTerm}: N/A`);
                 }
 
-                console.log(`✅ [${zone.name} - P${profileId}] ${item.searchTerm}: $${result.price.toLocaleString()}`);
-            } else {
-                console.log(`❌ [${zone.name} - P${profileId}] ${item.searchTerm}: N/A`);
+                zoneData.items.push({
+                    name: result ? result.name : item.searchTerm,
+                    price: currentPrice,
+                    alert: hitResult !== null,
+                    isNew: isNew
+                });
             }
-
-            const isNew = result && (notifiedPriceCache[cacheKey] !== result.price);
-
-            zoneData.items.push({
-                name: result ? result.name : item.searchTerm,
-                price: currentPrice,
-                alert: hitResult !== null,
-                isNew: isNew
-            });
+            updateTable.push(zoneData);
         }
-        updateTable.push(zoneData);
-    }
         latestPrices[profileId] = updateTable;
 
-    // Xử lý thông báo Discord
-    const currentBargainKeys = currentBargains.map(b => `${b.name}_${b.zone}_${b.price}`).sort().join('|');
-    const contentChanged = currentBargainKeys !== (lastBargainKeys[profileId] || "");
+        // Xử lý thông báo Discord
+        const currentBargainKeys = currentBargains.map(b => `${b.name}_${b.zone}_${b.price}`).sort().join('|');
+        const contentChanged = currentBargainKeys !== (lastBargainKeys[profileId] || "");
 
-    if (profile.discordEnabled) {
-        if (newHits.length > 0 || contentChanged) {
-            // Có thay đổi (đồ mới, đổi giá, hoặc đồ cũ biến mất)
-            if (lastMessageId[profileId]) {
-                await deleteDiscordMessage(profile.webhook, lastMessageId[profileId]);
-            }
+        if (profile.discordEnabled) {
+            if (newHits.length > 0 || contentChanged) {
+                // Có thay đổi (đồ mới, đổi giá, hoặc đồ cũ biến mất)
+                if (lastMessageId[profileId]) {
+                    await deleteDiscordMessage(profile.webhook, lastMessageId[profileId]);
+                }
 
-            if (currentBargains.length > 0) {
-                const hasSpecialHit = newHits.some(h => h.isSpecial);
-                lastMessageId[profileId] = await sendDiscordEmbed(
-                    profile.webhook,
-                    currentBargains,
-                    selectedZones,
-                    hasSpecialHit ? profile.roleId : "" // Chỉ Tag nếu có đồ đặc biệt mới
-                );
-                lastBargainKeys[profileId] = currentBargainKeys;
-            } else {
-                lastMessageId[profileId] = null;
-                lastBargainKeys[profileId] = "";
+                if (currentBargains.length > 0) {
+                    const hasSpecialHit = newHits.some(h => h && h.isSpecial);
+                    lastMessageId[profileId] = await sendDiscordEmbed(
+                        profile.webhook,
+                        currentBargains,
+                        selectedZones,
+                        hasSpecialHit ? profile.roleId : "" // Chỉ Tag nếu có đồ đặc biệt mới
+                    );
+                    lastBargainKeys[profileId] = currentBargainKeys;
+                } else {
+                    lastMessageId[profileId] = null;
+                    lastBargainKeys[profileId] = "";
+                }
             }
         }
-    }
 
-    console.log(`--- Quét xong [Profile ${profileId}] ---`);
-} catch (err) {
-    console.error(`🔥 Lỗi vòng lặp [Profile ${profileId}]:`, err.message);
-} finally {
-    isRunning[profileId] = false;
-}
+        console.log(`--- Quét xong [Profile ${profileId}] ---`);
+    } catch (err) {
+        console.error(`🔥 Lỗi vòng lặp [Profile ${profileId}]:`, err.message);
+    } finally {
+        isRunning[profileId] = false;
+    }
 }
 
 // API Endpoints
