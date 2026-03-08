@@ -281,7 +281,7 @@ async function runCycle(profileId) {
                 }
 
                 if (currentBargains.length > 0) {
-                    const hasSpecialHit = newHits.some(h => h && h.isSpecial);
+                    const hasSpecialHit = currentBargains.some(h => h && h.isSpecial);
                     lastMessageId[profileId] = await sendDiscordEmbed(
                         profile.webhook,
                         currentBargains,
@@ -425,3 +425,4 @@ app.listen(PORT, () => {
         }
     });
 });
+
