@@ -368,6 +368,10 @@
                     <option value="name">Tên</option>
                     <option value="internal">ID Nội bộ</option>
                 </select>
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 15px;">
+                    <input type="checkbox" id="isSpecial" style="width: auto; margin: 0;">
+                    <label style="margin: 0; cursor: pointer;" for="isSpecial">Đặc biệt (Tag Role)</label>
+                </div>
                 <button class="btn-primary" onclick="addItem()">Thêm Vật Phẩm</button>
             </div>
 
@@ -444,6 +448,10 @@
             <div class="input-group">
                 <label>Giá Báo Động</label>
                 <input id="editAlertPrice" type="text" placeholder="Giá..." oninput="formatNumberInput(this)">
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 15px;">
+                <input type="checkbox" id="editIsSpecial" style="width: auto; margin: 0;">
+                <label style="margin: 0; cursor: pointer;" for="editIsSpecial">Đặc biệt (Tag Role)</label>
             </div>
             <div style="display: flex; gap: 10px; margin-top: 20px;">
                 <button class="btn-primary" style="flex: 1" onclick="saveEdit()">Lưu thay đổi</button>
@@ -714,7 +722,10 @@
                 const card = document.createElement("div");
                 card.className = "item-card";
                 card.innerHTML = `
-                    <div style="font-weight: 700; color: var(--primary)">${item.searchTerm}</div>
+                    <div style="display:flex; justify-content:space-between; align-items:start;">
+                        <div style="font-weight: 700; color: var(--primary)">${item.searchTerm}</div>
+                        ${item.isSpecial ? '<span title="Đặc biệt (Tag Role)" style="color:#ffde59; cursor:help;">⭐</span>' : ''}
+                    </div>
                     <div style="font-size: 12px; color: var(--text-dim)">Alert: $${Number(item.alert).toLocaleString()}</div>
                     <div style="margin-top: 10px; display: flex; gap: 10px;">
                         <span style="color: var(--primary); cursor: pointer; font-size: 12px" onclick="openEditModal(${i})">Sửa</span>
@@ -745,6 +756,7 @@
                     searchTerm: searchTerm,
                     alert: alertPrice,
                     mode: document.getElementById("mode").value,
+                    isSpecial: document.getElementById("isSpecial").checked,
                     alertEnabled: true
                 });
 
@@ -775,6 +787,7 @@
 
             const priceInput = document.getElementById("editAlertPrice");
             priceInput.value = item.alert.toLocaleString();
+            document.getElementById("editIsSpecial").checked = item.isSpecial || false;
 
             document.getElementById("editModal").style.display = "flex";
         }
@@ -797,6 +810,7 @@
 
                 config.profiles[pIndex].items[index].searchTerm = searchTerm;
                 config.profiles[pIndex].items[index].alert = alertPrice;
+                config.profiles[pIndex].items[index].isSpecial = document.getElementById("editIsSpecial").checked;
 
                 await saveConfig(config);
                 closeEditModal();
@@ -936,6 +950,7 @@
                         searchTerm: it.searchTerm || it.name || "",
                         alert: parseInt(it.alertPrice || it.alert || 0),
                         mode: it.mode || "name",
+                        isSpecial: it.isSpecial === true,
                         alertEnabled: it.alertEnabled !== false
                     }));
                 }
