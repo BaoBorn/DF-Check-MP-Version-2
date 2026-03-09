@@ -109,28 +109,57 @@ let lastBargainKeys = {}; // { profileId: string }
 async function sendDiscordEmbed(webhook, itemsFound, zones, roleId) {
     if (!webhook || itemsFound.length === 0) return null;
 
-    const embeds = zones.map(zone => {
-        const zoneItems = itemsFound.filter(it => it.zone === zone.name);
-        if (zoneItems.length === 0) return null;
+    let embeds = [];
+    const specialItems = itemsFound.filter(it => it.isSpecial);
+    const standardItems = itemsFound.filter(it => !it.isSpecial);
 
-        return {
-            title: `📍 Khu vực: ${zone.name}`,
-            color: 0x00ff88,
-            fields: zoneItems.map(it => ({
-                name: `📦 ${it.name}`,
-                value: `💰 **Giá: $${it.price.toLocaleString()}**\n🚨 Ngưỡng báo: $${it.alertPrice.toLocaleString()}`,
-                inline: true
-            })),
-            timestamp: new Date().toISOString(),
-            footer: { text: "DF Marketplace Tracker Web Pro" }
-        };
-    }).filter(e => e !== null);
+    // 1. Thẻ dành riêng cho Đồ Đặc Biệt (Gom nhóm theo khu vực nhưng nổi bật hơn)
+    if (specialItems.length > 0) {
+        zones.forEach(zone => {
+            const zoneSpecialItems = specialItems.filter(it => it.zone === zone.name);
+            if (zoneSpecialItems.length > 0) {
+                embeds.push({
+                    title: `🌟 [SIÊU CẤP] ${zone.name.toUpperCase()} 🌟`,
+                    color: 0xffd700, // Vàng kim rực rỡ
+                    description: "✨ **Phát hiện vật phẩm cực hiếm giá hời!** ✨",
+                    fields: zoneSpecialItems.map(it => ({
+                        name: `✨ ${it.name.toUpperCase()} ✨`,
+                        value: `💰 Giá: **$${it.price.toLocaleString()}**\n🚨 Ngưỡng: $${it.alertPrice.toLocaleString()}`,
+                        inline: true
+                    })),
+                    timestamp: new Date().toISOString(),
+                    footer: { text: "💎 PREMIUM ALERT - DF Tracker Pro" }
+                });
+            }
+        });
+    }
+
+    // 2. Thẻ dành cho Đồ Thường (Gom nhóm theo khu vực)
+    if (standardItems.length > 0) {
+        zones.forEach(zone => {
+            const zoneItems = standardItems.filter(it => it.zone === zone.name);
+            if (zoneItems.length > 0) {
+                embeds.push({
+                    title: `📦 Đồ giá rẻ: ${zone.name}`,
+                    color: 0x00ff88, // Xanh lá tiêu chuẩn
+                    fields: zoneItems.map(it => ({
+                        name: `📦 ${it.name}`,
+                        value: `💰 **Giá: $${it.price.toLocaleString()}**\n🚨 Ngưỡng: $${it.alertPrice.toLocaleString()}`,
+                        inline: true
+                    })),
+                    timestamp: new Date().toISOString(),
+                    footer: { text: "Marketplace Tracker" }
+                });
+            }
+        });
+    }
 
     if (embeds.length === 0) return null;
 
     try {
         const payload = { embeds };
-        payload.content = roleId ? `🔔 <@&${roleId}> **Phát hiện đồ đặc biệt giá rẻ!**` : `🔔 **Phát hiện đồ giá rẻ!**`;
+        const hasSpecial = specialItems.length > 0;
+        payload.content = roleId ? `🔔 <@&${roleId}> ${hasSpecial ? '🌟 **ĐỒ ĐẶC BIỆT XUẤT HIỆN!** 🌟' : '**Phát hiện đồ giá rẻ!**'}` : `🔔 **Phát hiện đồ giá rẻ!**`;
 
         const res = await axios.post(webhook + "?wait=true", payload);
         console.log(`✅ Đã gửi webhook Discord thành công. ID: ${res.data.id}`);
@@ -262,7 +291,8 @@ async function runCycle(profileId) {
                     name: result ? result.name : item.searchTerm,
                     price: currentPrice,
                     alert: hitResult !== null,
-                    isNew: isNew
+                    isNew: isNew,
+                    isSpecial: item.isSpecial || false
                 });
             }
             updateTable.push(zoneData);
@@ -286,7 +316,7 @@ async function runCycle(profileId) {
                         profile.webhook,
                         currentBargains,
                         selectedZones,
-                        hasSpecialHit ? profile.roleId : "" // Chỉ Tag nếu có đồ đặc biệt mới
+                        hasSpecialHit ? profile.roleId : "" // Persistent Tag if special item exists
                     );
                     lastBargainKeys[profileId] = currentBargainKeys;
                 } else {
@@ -425,4 +455,3 @@ app.listen(PORT, () => {
         }
     });
 });
-
