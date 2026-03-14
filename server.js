@@ -113,7 +113,27 @@ async function sendDiscordEmbed(webhook, itemsFound, zones, roleId) {
     const specialItems = itemsFound.filter(it => it.isSpecial);
     const standardItems = itemsFound.filter(it => !it.isSpecial);
 
-    // 1. Thẻ dành riêng cho Đồ Đặc Biệt (Gom nhóm theo khu vực nhưng nổi bật hơn)
+    // 1. Thẻ dành cho Đồ Thường (Gom nhóm theo khu vực)
+    if (standardItems.length > 0) {
+        zones.forEach(zone => {
+            const zoneItems = standardItems.filter(it => it.zone === zone.name);
+            if (zoneItems.length > 0) {
+                embeds.push({
+                    title: `📦 Đồ giá rẻ: ${zone.name}`,
+                    color: 0x00ff88, // Xanh lá tiêu chuẩn
+                    fields: zoneItems.map(it => ({
+                        name: `📦 ${it.name}`,
+                        value: `💰 **Giá: $${it.price.toLocaleString()}**\n🚨 Ngưỡng: $${it.alertPrice.toLocaleString()}`,
+                        inline: true
+                    })),
+                    timestamp: new Date().toISOString(),
+                    footer: { text: "Marketplace Tracker" }
+                });
+            }
+        });
+    }
+
+    // 2. Thẻ dành riêng cho Đồ Đặc Biệt (Gom nhóm theo khu vực nhưng nổi bật hơn) - Xuống dưới cùng
     if (specialItems.length > 0) {
         zones.forEach(zone => {
             const zoneSpecialItems = specialItems.filter(it => it.zone === zone.name);
@@ -129,26 +149,6 @@ async function sendDiscordEmbed(webhook, itemsFound, zones, roleId) {
                     })),
                     timestamp: new Date().toISOString(),
                     footer: { text: "💎 PREMIUM ALERT - DF Tracker Pro" }
-                });
-            }
-        });
-    }
-
-    // 2. Thẻ dành cho Đồ Thường (Gom nhóm theo khu vực)
-    if (standardItems.length > 0) {
-        zones.forEach(zone => {
-            const zoneItems = standardItems.filter(it => it.zone === zone.name);
-            if (zoneItems.length > 0) {
-                embeds.push({
-                    title: `📦 Đồ giá rẻ: ${zone.name}`,
-                    color: 0x00ff88, // Xanh lá tiêu chuẩn
-                    fields: zoneItems.map(it => ({
-                        name: `📦 ${it.name}`,
-                        value: `💰 **Giá: $${it.price.toLocaleString()}**\n🚨 Ngưỡng: $${it.alertPrice.toLocaleString()}`,
-                        inline: true
-                    })),
-                    timestamp: new Date().toISOString(),
-                    footer: { text: "Marketplace Tracker" }
                 });
             }
         });
